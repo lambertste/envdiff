@@ -1,75 +1,50 @@
 package diff
 
-import (
-	"sort"
+import "sort"
 
-	"github.com/user/envdiff/internal/parser"
-)
-
-// ChangeKind classifies the type of difference between two env files.
-type ChangeKind string
+// Status represents the change status of an environment variable.
+type Status int
 
 const (
-	Added    ChangeKind = "added"    // key exists in right but not left
-	Removed  ChangeKind = "removed"  // key exists in left but not right
-	Modified ChangeKind = "modified" // key exists in both but values differ
+	Unchanged Status = iota
+	Added
+	Removed
+	Modified
 )
 
-// Change represents a single diffed entry.
-type Change struct {
+// Entry represents a single key comparison result between two env maps.
+type Entry struct {
 	Key      string
-	Kind     ChangeKind
-	OldValue string // empty for Added
-	NewValue string // empty for Removed
+	Status   Status
+	OldValue string
+	NewValue string
 }
 
-// Result holds the full diff output between two env maps.
-type Result struct {
-	Changes []Change
-}
+// Diff compares two env maps (source, target) and returns a slice of Entry
+// describing keys that were added, removed, or modified in target relative to source.
+// Unchanged keys are omitted. Results are sorted by key.
+func Diff(source, target map[string]string) []Entry {
+	seen := make(map[string]bool)
+	var entries []Entry
 
-// HasChanges returns true if there are any differences.
-func (r *Result) HasChanges() bool {
-	return len(r.Changes) > 0
-}
-
-// Diff computes the difference between a base (left) and target (right) EnvMap.
-func Diff(left, right parser.EnvMap) *Result {
-	result := &Result{}
-
-	// Detect removed and modified keys.
-	for k, lv := range left {
-		if rv, ok := right[k]; !ok {
-			result.Changes = append(result.Changes, Change{
-				Key:      k,
-				Kind:     Removed,
-				OldValue: lv,
-			})
-		} else if lv != rv {
-			result.Changes = append(result.Changes, Change{
-				Key:      k,
-				Kind:     Modified,
-				OldValue: lv,
-				NewValue: rv,
-			})
+	for k, sv := range source {
+		seen[k] = true
+		if tv, ok := target[k]; !ok {
+			entries = append(entries, Entry{Key: k, Status: Removed, OldValue: sv})
+		} else if sv != tv {
+			entries = append(entries, Entry{Key: k, Status: Modified, OldValue: sv, NewValue: tv})
 		}
 	}
 
-	// Detect added keys.
-	for k, rv := range right {
-		if _, ok := left[k]; !ok {
-			result.Changes = append(result.Changes, Change{
-				Key:      k,
-				Kind:     Added,
-				NewValue: rv,
-			})
+	for k, tv := range target {
+		if !seen[k] {
+			entries = append(entries, Entry{Key: k, Status: Added, NewValue: tv})
 		}
 	}
 
-	// Sort changes for deterministic output.
-	sort.Slice(result.Changes, func(i, j int) bool {
-		return result.Changes[i].Key < result.Changes[j].Key
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].Key < entries[j].Key
 	})
 
-	return result
+	return entries
 }
