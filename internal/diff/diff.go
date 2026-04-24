@@ -2,49 +2,49 @@ package diff
 
 import "sort"
 
-// Status represents the change status of an environment variable.
-type Status int
+// Kind describes the type of change for a key.
+type Kind string
 
 const (
-	Unchanged Status = iota
-	Added
-	Removed
-	Modified
+	Added    Kind = "added"
+	Removed  Kind = "removed"
+	Modified Kind = "modified"
+	Unchanged Kind = "unchanged"
 )
 
-// Entry represents a single key comparison result between two env maps.
+// Entry represents a single diff result for one environment variable key.
 type Entry struct {
 	Key      string
-	Status   Status
+	Kind     Kind
 	OldValue string
 	NewValue string
 }
 
-// Diff compares two env maps (source, target) and returns a slice of Entry
-// describing keys that were added, removed, or modified in target relative to source.
-// Unchanged keys are omitted. Results are sorted by key.
-func Diff(source, target map[string]string) []Entry {
+// Diff compares two maps of environment variables (base vs target) and returns
+// a sorted slice of Entry describing the differences.
+func Diff(base, target map[string]string) []Entry {
 	seen := make(map[string]bool)
-	var entries []Entry
+	var results []Entry
 
-	for k, sv := range source {
+	for k, targetVal := range target {
 		seen[k] = true
-		if tv, ok := target[k]; !ok {
-			entries = append(entries, Entry{Key: k, Status: Removed, OldValue: sv})
-		} else if sv != tv {
-			entries = append(entries, Entry{Key: k, Status: Modified, OldValue: sv, NewValue: tv})
+		baseVal, exists := base[k]
+		if !exists {
+			results = append(results, Entry{Key: k, Kind: Added, NewValue: targetVal})
+		} else if baseVal != targetVal {
+			results = append(results, Entry{Key: k, Kind: Modified, OldValue: baseVal, NewValue: targetVal})
 		}
 	}
 
-	for k, tv := range target {
+	for k, baseVal := range base {
 		if !seen[k] {
-			entries = append(entries, Entry{Key: k, Status: Added, NewValue: tv})
+			results = append(results, Entry{Key: k, Kind: Removed, OldValue: baseVal})
 		}
 	}
 
-	sort.Slice(entries, func(i, j int) bool {
-		return entries[i].Key < entries[j].Key
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].Key < results[j].Key
 	})
 
-	return entries
+	return results
 }
