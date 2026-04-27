@@ -12,6 +12,12 @@ import (
 
 // runMerge executes the merge subcommand.
 // Usage: envdiff merge [--strategy=base|override] [--format=text|dotenv|color] <base-file> <override-file>
+//
+// Conflict behaviour:
+//   - "base"     keeps the value from <base-file> when the same key appears in both files.
+//   - "override" keeps the value from <override-file> when the same key appears in both files.
+//
+// Conflicts are always reported to stderr regardless of the chosen strategy.
 func runMerge(args []string) error {
 	fs := flag.NewFlagSet("merge", flag.ContinueOnError)
 	strategyFlag := fs.String("strategy", "base", "conflict resolution strategy: base or override")
@@ -38,14 +44,9 @@ func runMerge(args []string) error {
 		return fmt.Errorf("reading override file %q: %w", overFile, err)
 	}
 
-	var strategy merge.Strategy
-	switch *strategyFlag {
-	case "base":
-		strategy = merge.PreferBase
-	case "override":
-		strategy = merge.PreferOverride
-	default:
-		return fmt.Errorf("unknown strategy %q: use 'base' or 'override'", *strategyFlag)
+	strategy, err := parseStrategy(*strategyFlag)
+	if err != nil {
+		return err
 	}
 
 	result := merge.Merge(baseEnv, overEnv, strategy)
@@ -61,4 +62,16 @@ func runMerge(args []string) error {
 	}
 
 	return nil
+}
+
+// parseStrategy converts the strategy flag string into a merge.Strategy value.
+func parseStrategy(s string) (merge.Strategy, error) {
+	switch s {
+	case "base":
+		return merge.PreferBase, nil
+	case "override":
+		return merge.PreferOverride, nil
+	default:
+		return 0, fmt.Errorf("unknown strategy %q: use 'base' or 'override'", s)
+	}
 }
