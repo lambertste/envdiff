@@ -42,13 +42,28 @@ func runInterpolate(args []string) error {
 		return fmt.Errorf("interpolation failed: %d unresolved reference(s)", len(errs))
 	}
 
+	if err := writeInterpolated(out, *outFmt); err != nil {
+		return fmt.Errorf("write: %w", err)
+	}
+	return nil
+}
+
+// writeInterpolated writes all keys from the interpolated store to stdout
+// using the specified output format ("shell" or "dotenv").
+func writeInterpolated(out env.Store, outFmt string) error {
 	for _, key := range out.Keys() {
 		val, _ := out.Get(key)
-		switch *outFmt {
+		switch outFmt {
 		case "shell":
-			fmt.Printf("%s=%q\n", key, val)
+			_, err := fmt.Printf("%s=%q\n", key, val)
+			if err != nil {
+				return err
+			}
 		default:
-			fmt.Printf("%s=%s\n", key, val)
+			_, err := fmt.Printf("%s=%s\n", key, val)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
