@@ -63,3 +63,25 @@ func TestDiff_SortedOutput(t *testing.T) {
 		t.Errorf("changes not sorted: %+v", r.Changes)
 	}
 }
+
+func TestDiff_BothEmpty(t *testing.T) {
+	left := parser.EnvMap{}
+	right := parser.EnvMap{}
+	r := Diff(left, right)
+	if r.HasChanges() {
+		t.Errorf("expected no changes for two empty maps, got %+v", r.Changes)
+	}
+}
+
+func TestDiff_MultipleKinds(t *testing.T) {
+	left := parser.EnvMap{"KEEP": "same", "REMOVE": "old", "CHANGE": "before"}
+	right := parser.EnvMap{"KEEP": "same", "ADD": "new", "CHANGE": "after"}
+	r := Diff(left, right)
+	if len(r.Changes) != 3 {
+		t.Fatalf("expected 3 changes, got %d", len(r.Changes))
+	}
+	// Verify HasChanges reflects the mixed result
+	if !r.HasChanges() {
+		t.Error("expected HasChanges to return true")
+	}
+}
