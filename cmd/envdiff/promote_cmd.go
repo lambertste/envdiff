@@ -70,12 +70,11 @@ func runPromote(args []string) error {
 
 	w := os.Stdout
 	if *output != "" {
-		f, err := os.Create(*output)
+		w, err = openOutputFile(*output)
 		if err != nil {
-			return fmt.Errorf("opening output file: %w", err)
+			return err
 		}
-		defer f.Close()
-		w = f
+		defer w.(*os.File).Close()
 	}
 
 	for _, k := range dstSet.Keys() {
@@ -84,4 +83,14 @@ func runPromote(args []string) error {
 	}
 
 	return nil
+}
+
+// openOutputFile creates or truncates the file at path and returns it for writing.
+// The caller is responsible for closing the returned file.
+func openOutputFile(path string) (*os.File, error) {
+	f, err := os.Create(path)
+	if err != nil {
+		return nil, fmt.Errorf("opening output file %q: %w", path, err)
+	}
+	return f, nil
 }
