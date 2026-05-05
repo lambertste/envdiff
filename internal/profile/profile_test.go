@@ -46,6 +46,23 @@ func TestRegistry_List(t *testing.T) {
 	}
 }
 
+func TestRegistry_Add_OverwritesExisting(t *testing.T) {
+	r := profile.NewRegistry()
+	r.Add(profile.Profile{Name: "dev", File: ".env.dev"})
+	r.Add(profile.Profile{Name: "dev", File: ".env.dev.new"})
+
+	got, ok := r.Get("dev")
+	if !ok {
+		t.Fatal("expected dev profile to exist")
+	}
+	if got.File != ".env.dev.new" {
+		t.Errorf("expected overwritten file %q, got %q", ".env.dev.new", got.File)
+	}
+	if len(r.List()) != 1 {
+		t.Errorf("expected 1 profile after overwrite, got %d", len(r.List()))
+	}
+}
+
 func TestSaveAndLoad_RoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "profiles.json")
