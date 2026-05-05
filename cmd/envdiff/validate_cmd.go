@@ -11,6 +11,12 @@ import (
 // runValidate loads an env file and runs all default rules plus the
 // no-plaintext-secret rule, printing any violations to stdout.
 // Returns a non-zero exit code if violations are found.
+//
+// Exit codes:
+//
+//	0 - all rules passed
+//	1 - one or more violations found
+//	2 - error reading or parsing the file
 func runValidate(path string, requiredKeys []string) int {
 	env, err := parser.ParseFile(path)
 	if err != nil {
