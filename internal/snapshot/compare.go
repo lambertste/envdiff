@@ -14,6 +14,11 @@ type DiffResult struct {
 	Unchanged []string
 }
 
+// IsClean returns true if there are no differences between the two snapshots.
+func (d DiffResult) IsClean() bool {
+	return len(d.Added) == 0 && len(d.Removed) == 0 && len(d.Modified) == 0
+}
+
 // Compare diffs two snapshots and returns a DiffResult.
 func Compare(base, other *Snapshot) DiffResult {
 	var result DiffResult
