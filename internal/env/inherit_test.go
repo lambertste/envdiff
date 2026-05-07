@@ -84,6 +84,13 @@ func TestInherit_NilChildReturnsError(t *testing.T) {
 	}
 }
 
+func TestInherit_NilParentReturnsError(t *testing.T) {
+	_, _, err := Inherit(baseInheritChild(), nil, DefaultInheritOptions())
+	if err == nil {
+		t.Error("expected error for nil parent")
+	}
+}
+
 func TestFormatInheritResult_ContainsKeys(t *testing.T) {
 	r := InheritResult{
 		Inherited: []string{"DB_HOST", "TIMEOUT"},
